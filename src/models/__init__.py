@@ -1,0 +1,1 @@
+"""EdgeVision-Compress — models package."""

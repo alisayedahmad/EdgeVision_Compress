@@ -1,0 +1,54 @@
+# ── Python ───────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+build/
+dist/
+*.egg-info/
+*.egg
+
+# ── Testing ───────────────────────────────────────────────────────────────────
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# ── Virtual environments ──────────────────────────────────────────────────────
+.venv/
+venv/
+ENV/
+
+# ── IDE ───────────────────────────────────────────────────────────────────────
+.vscode/settings.json
+.vscode/*.log
+.idea/
+*.swp
+
+# ── OS ────────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── ML artifacts ─────────────────────────────────────────────────────────────
+mlruns/
+outputs/
+multirun/
+*.pth
+*.pt
+*.ckpt
+*.safetensors
+*.onnx
+
+# ── DVC — data is versioned by DVC, not Git ───────────────────────────────────
+/data
+
+# ── Hydra ─────────────────────────────────────────────────────────────────────
+.hydra/
+
+# ── Jupyter ───────────────────────────────────────────────────────────────────
+.ipynb_checkpoints/
+
+# ── Environment variables ─────────────────────────────────────────────────────
+.env
+.env.local

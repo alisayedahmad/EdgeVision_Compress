@@ -1,0 +1,5 @@
+# Unstructured pruning configuration — populated in Module 3
+method: l1_unstructured
+target_sparsity: 0.5
+n_iterations: 5
+finetune_epochs: 5

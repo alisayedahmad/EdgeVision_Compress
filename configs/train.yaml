@@ -1,0 +1,25 @@
+# @package _global_
+# Main training configuration — loaded by Hydra
+defaults:
+  - model: resnet50
+  - _self_
+
+seed: 42
+
+paths:
+  data_dir: data/mvtec
+  output_dir: outputs/training
+  checkpoint_dir: outputs/checkpoints
+
+training:
+  epochs: 50
+  batch_size: 32
+  learning_rate: 1.0e-4
+  weight_decay: 1.0e-4
+  num_workers: 4
+  early_stopping_patience: 10
+
+mlflow:
+  experiment_name: edgevision-baseline
+  tracking_uri: mlruns
+  run_name: null

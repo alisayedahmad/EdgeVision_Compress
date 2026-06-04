@@ -1,0 +1,5 @@
+# EdgeVision-Compress DVC Pipeline
+# Stages are added progressively as modules are completed.
+# Reference: https://dvc.org/doc/user-guide/project-structure/dvcyaml-files
+
+stages: {}

@@ -1,0 +1,1 @@
+"""EdgeVision-Compress — test suite."""

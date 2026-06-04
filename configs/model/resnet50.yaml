@@ -1,0 +1,5 @@
+# ResNet50 model configuration — Hydra config group
+name: resnet50
+pretrained: true
+num_classes: 1
+freeze_backbone: false
