@@ -1,0 +1,25 @@
+# MVTec AD data configuration.
+# Start with 'bottle' — simplest category, trains fastest.
+# Swap to another category to verify generalisation.
+
+category: bottle
+image_size: 224
+val_fraction: 0.2
+
+# all 15 categories — useful for full-pipeline benchmarks later
+categories:
+  - bottle
+  - cable
+  - capsule
+  - carpet
+  - grid
+  - hazelnut
+  - leather
+  - metal_nut
+  - pill
+  - screw
+  - tile
+  - toothbrush
+  - transistor
+  - wood
+  - zipper

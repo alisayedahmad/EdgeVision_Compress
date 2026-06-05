@@ -1,7 +1,7 @@
 # @package _global_
-# Main training configuration — loaded by Hydra
 defaults:
   - model: resnet50
+  - data: mvtec
   - _self_
 
 seed: 42

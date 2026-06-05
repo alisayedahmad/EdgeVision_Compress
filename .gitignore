@@ -41,7 +41,9 @@ multirun/
 *.onnx
 
 # ── DVC — data is versioned by DVC, not Git ───────────────────────────────────
-/data
+/data/mvtec
+/data/*.tar.gz
+/data/*.tar.xz
 
 # ── Hydra ─────────────────────────────────────────────────────────────────────
 .hydra/
