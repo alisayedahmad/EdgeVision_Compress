@@ -1,5 +1,6 @@
-# ResNet50 model configuration — Hydra config group
+# ResNet50 config — shared by training and all compression modules
 name: resnet50
-pretrained: true
-num_classes: 1
-freeze_backbone: false
+pretrained: true          # always start from ImageNet weights
+freeze_backbone: false    # set true for quick sanity runs only
+hidden_dim: 256           # anomaly head hidden size
+dropout: 0.5              # head regularisation

@@ -21,5 +21,5 @@ training:
 
 mlflow:
   experiment_name: edgevision-baseline
-  tracking_uri: mlruns
+  tracking_uri: sqlite:///mlflow.db
   run_name: null
