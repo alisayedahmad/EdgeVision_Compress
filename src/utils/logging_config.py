@@ -49,7 +49,12 @@ def setup_logging(
     )
 
     # Console handler — always active
+    if sys.platform == "win32" and hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
+    # Console handler — always active
     console_handler = logging.StreamHandler(sys.stdout)
+    
     console_handler.setLevel(level)
     console_handler.setFormatter(formatter)
     logger.addHandler(console_handler)

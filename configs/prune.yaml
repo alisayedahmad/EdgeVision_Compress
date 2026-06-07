@@ -1,0 +1,32 @@
+# @package _global_
+# Top-level Hydra config for the unstructured pruning experiment.
+# Inherits model and data config groups from training.
+
+defaults:
+  - model: resnet50
+  - data: mvtec
+  - _self_
+
+seed: 42
+
+paths:
+  data_dir: data/mvtec
+  output_dir: outputs/pruning
+  checkpoint_dir: outputs/checkpoints   # same dir as baseline — we read from here
+
+training:
+  batch_size: 32
+  num_workers: 4                        # overridden to 0 on Windows in script
+
+mlflow:
+  experiment_name: edgevision-pruning-unstructured
+  tracking_uri: mlruns                  # override with sqlite:///mlflow.db if needed
+  run_name: null
+
+compression:
+  pruning:
+    method: l1_unstructured
+    target_sparsity: 0.5
+    n_iterations: 5
+    finetune_epochs: 5
+    finetune_lr: 1.0e-5
