@@ -54,3 +54,7 @@ multirun/
 # ── Environment variables ─────────────────────────────────────────────────────
 .env
 .env.local
+
+mlflow.db
+
+mlflow.db

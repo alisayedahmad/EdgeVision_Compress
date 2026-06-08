@@ -89,7 +89,7 @@ def main(cfg: DictConfig) -> None:
     )
 
     # ── MLflow ────────────────────────────────────────────────────────────────
-    mlflow.set_tracking_uri(cfg.mlflow.tracking_uri)
+    mlflow.set_tracking_uri((project_root / cfg.mlflow.tracking_uri).as_uri())
     mlflow.set_experiment(cfg.mlflow.experiment_name)
     run_name = cfg.mlflow.run_name or f"baseline_{cfg.data.category}"
 
