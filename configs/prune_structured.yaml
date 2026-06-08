@@ -1,0 +1,29 @@
+# @package _global_
+defaults:
+  - model: resnet50
+  - data: mvtec
+  - _self_
+
+seed: 42
+
+paths:
+  data_dir: data/mvtec
+  output_dir: outputs/structured_pruning
+  checkpoint_dir: outputs/checkpoints
+
+training:
+  batch_size: 32
+  num_workers: 4
+
+mlflow:
+  experiment_name: edgevision-pruning-structured
+  tracking_uri: mlruns
+  run_name: null
+
+compression:
+  structured:
+    prune_ratio: 0.3
+    min_channels: 4
+    n_calibration_batches: 20
+    finetune_epochs: 10
+    finetune_lr: 1.0e-5
