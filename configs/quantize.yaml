@@ -1,0 +1,29 @@
+# @package _global_
+defaults:
+  - model: resnet50
+  - data: mvtec
+  - _self_
+
+seed: 42
+
+paths:
+  data_dir: data/mvtec
+  output_dir: outputs/quantization
+  checkpoint_dir: outputs/checkpoints
+
+training:
+  batch_size: 32
+  num_workers: 4
+
+mlflow:
+  experiment_name: edgevision-quantization
+  tracking_uri: mlruns
+  run_name: null
+
+compression:
+  quantization:
+    ptq_calibration_batches: 32
+    qat_epochs: 5
+    qat_lr: 1.0e-5
+    n_warmup: 10
+    n_benchmark_runs: 100
