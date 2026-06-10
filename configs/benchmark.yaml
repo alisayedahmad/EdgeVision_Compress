@@ -1,11 +1,13 @@
 # @package _global_
-# Benchmark configuration — loaded by Hydra
 defaults:
+  - model: resnet50
+  - data: mvtec
   - _self_
 
 seed: 42
 
 paths:
+  data_dir: data/mvtec
   output_dir: outputs/benchmarks
 
 benchmark:
