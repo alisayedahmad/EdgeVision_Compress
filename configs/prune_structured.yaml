@@ -1,4 +1,6 @@
 # @package _global_
+# Top-level Hydra config for structured channel pruning.
+
 defaults:
   - model: resnet50
   - data: mvtec
@@ -22,8 +24,8 @@ mlflow:
 
 compression:
   structured:
-    prune_ratio: 0.3
-    min_channels: 4
-    n_calibration_batches: 20
-    finetune_epochs: 10
-    finetune_lr: 1.0e-5
+    prune_ratio: 0.3              # fraction of conv2 filters to remove globally
+    min_channels: 4               # minimum channels preserved per block
+    n_calibration_batches: 20     # batches used to estimate Taylor scores
+    finetune_epochs: 10           # epochs of fine-tuning after pruning
+    finetune_lr: 1.0e-5           # LR lower than baseline to avoid overwriting features
