@@ -1,0 +1,31 @@
+# @package _global_
+defaults:
+  - model: resnet50
+  - data: mvtec
+  - _self_
+
+seed: 42
+
+paths:
+  data_dir: data/mvtec
+  output_dir: outputs/distillation
+  checkpoint_dir: outputs/checkpoints
+
+training:
+  batch_size: 32
+  num_workers: 4
+
+mlflow:
+  experiment_name: edgevision-distillation
+  tracking_uri: mlruns
+  run_name: null
+
+distillation:
+  epochs: 30
+  lr: 1.0e-4
+  weight_decay: 1.0e-4
+  alpha: 0.3           # task loss weight
+  beta: 0.5            # KL divergence weight
+  gamma: 0.2           # feature matching weight
+  temperature: 4.0     # softens teacher predictions
+  student_pretrained: true
