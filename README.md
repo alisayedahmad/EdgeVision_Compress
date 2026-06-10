@@ -22,17 +22,18 @@ The pipeline covers four techniques applied in sequence:
 
 ## Results
 
-Updated as each module is completed.
+Evaluated on the MVTec AD `bottle` category, test split.
 
 | Model | Image AUROC | Latency P50 (ms) | Size (MB) | FLOPs |
 |---|---|---|---|---|
-| ResNet50 baseline | 0.9902 | — | — | — |
-| + Unstructured pruning | — | — | — | — |
-| + Structured pruning | — | — | — | — |
-| + INT8 QAT | — | — | — | — |
-| MobileNetV3-Small (student) | — | — | — | — |
+| ResNet50 baseline | 0.9902 | — | ~98 | 8.18G |
+| + Unstructured pruning (85% sparse) | 1.0000 | — | ~98 | 8.18G |
+| + Structured pruning (30% channels) | 0.9926 | 74.7 | 77.2 | 6.22G |
+| + PTQ INT8 | 0.9369 | 31.4 | 19.7 | — |
+| + QAT INT8 | 0.9951 | — | 19.7 | — |
+| MobileNetV3-Small (distilled) | 0.9890 | 21.3 | 4.1 | — |
 
-Evaluated on the MVTec AD `bottle` category, test split.
+The distilled student achieves 99.9% of the teacher's AUROC while being 19x smaller and 3.5x faster on CPU.
 
 ## Installation
 
@@ -59,8 +60,6 @@ pip install -e ".[dev]"
 
 This project uses the [MVTec Anomaly Detection dataset](https://www.mvtec.com/company/research/datasets/mvtec-ad) (Bergmann et al., CVPR 2019). It contains 15 categories of industrial objects and textures, with pixel-level ground truth masks for all defect types.
 
-Download and prepare:
-
 ```bash
 python scripts/download_mvtec.py --output data/mvtec
 dvc add data/mvtec
@@ -68,17 +67,26 @@ dvc add data/mvtec
 
 The dataset is tracked with DVC and is not stored in Git.
 
-## Training the baseline
+## Usage
 
 ```bash
-# Full training on the bottle category (default)
+# Train baseline
 python scripts/train_baseline.py
+
+# Unstructured pruning
+python scripts/prune_unstructured.py "mlflow.tracking_uri=sqlite:///mlflow.db"
+
+# Structured channel pruning
+python scripts/prune_structured.py "mlflow.tracking_uri=sqlite:///mlflow.db"
+
+# Quantization (PTQ + QAT)
+python scripts/quantize.py "mlflow.tracking_uri=sqlite:///mlflow.db"
+
+# Knowledge distillation
+python scripts/distill.py "mlflow.tracking_uri=sqlite:///mlflow.db"
 
 # Different category
 python scripts/train_baseline.py data.category=capsule
-
-# Quick smoke test (2 epochs)
-python scripts/train_baseline.py training.epochs=2 training.batch_size=16
 ```
 
 All hyperparameters live in `configs/` — nothing is hardcoded in the source files.
@@ -89,7 +97,7 @@ All hyperparameters live in `configs/` — nothing is hardcoded in the source fi
 mlflow ui
 ```
 
-Opens the MLflow dashboard at `http://localhost:5000`. Every training run logs its parameters, metrics per epoch, and the best checkpoint.
+Opens the MLflow dashboard at `http://localhost:5000`. Every run logs parameters, metrics per epoch, and the best checkpoint.
 
 ## Running tests
 
@@ -102,58 +110,66 @@ pytest tests/ -v
 ```
 EdgeVision-Compress/
 ├── configs/
-│   ├── model/                  # resnet50.yaml, mobilenet.yaml, ...
-│   ├── compression/            # pruning.yaml, quantization.yaml, ...
+│   ├── model/                  # resnet50.yaml
+│   ├── compression/            # pruning.yaml
 │   ├── data/                   # mvtec.yaml
-│   ├── train.yaml              # main training config
-│   └── benchmark.yaml          # benchmark config
+│   ├── train.yaml              # baseline training
+│   ├── prune.yaml              # unstructured pruning
+│   ├── prune_structured.yaml   # structured pruning
+│   ├── quantize.yaml           # PTQ and QAT
+│   └── distill.yaml            # knowledge distillation
 ├── data/                       # DVC-tracked, not in Git
 ├── src/
-│   ├── models/                 # ResNet50AnomalyDetector, student model
+│   ├── models/                 # ResNet50AnomalyDetector, MobileNetV3Student
 │   ├── compression/
-│   │   ├── pruning/            # unstructured + structured pruning
-│   │   ├── quantization/       # PTQ and QAT
-│   │   └── distillation/       # knowledge distillation
+│   │   ├── pruning/            # unstructured (L1), structured (Taylor), FLOPs counter
+│   │   ├── quantization/       # PTQ and QAT via FX graph mode
+│   │   └── distillation/       # combined loss, distillation trainer
+│   ├── benchmark/              # CPU latency measurement
 │   ├── data/                   # MVTecDataset, CutPaste augmentation
 │   ├── evaluation/             # image AUROC, pixel AUROC
 │   ├── training/               # Trainer, EarlyStopping
 │   └── utils/                  # logging, seeding
-├── scripts/                    # train_baseline.py, download_mvtec.py, ...
-├── notebooks/                  # exploration only, no production logic
-├── tests/                      # pytest test suite — one file per module
-├── demo/                       # Gradio demo (Module 9)
-├── .github/workflows/ci.yml    # runs pytest on every push
+├── scripts/                    # one script per module
+├── tests/                      # pytest — one file per module
+├── .github/workflows/ci.yml    # CI on every push
 ├── dvc.yaml                    # DVC pipeline stages
-└── pyproject.toml              # package definition and dependencies
+└── pyproject.toml              # package definition
 ```
 
 ## Design decisions
 
-**Why CutPaste for training?** MVTec provides only normal images in the training split. CutPaste creates synthetic anomalies on-the-fly by cutting a patch from an image and pasting it elsewhere. The model learns to detect spatial inconsistencies, which transfers well to real industrial defects.
+**Why CutPaste for training?** MVTec provides only normal images in the training split. CutPaste creates synthetic anomalies on-the-fly by cutting a patch and pasting it elsewhere. The model learns to detect spatial inconsistencies, which transfers well to real defects.
 
-**Why AUROC and not accuracy?** The test set is imbalanced (more normal images than defective ones). Accuracy would be misleading. AUROC measures ranking quality over the full operating range, independent of any threshold choice.
+**Why AUROC?** The test set is imbalanced. AUROC measures ranking quality over the full operating range, independent of threshold choice.
 
-**Why Hydra for config?** Every hyperparameter lives in a YAML file. Launching a variant requires no code change: `python train.py training.lr=1e-3`. Hydra also saves the exact config used for every run automatically.
+**Why structured pruning after unstructured?** Unstructured pruning proves the model has massive redundancy (85% zeros, no AUROC loss). Structured pruning exploits that by removing entire filters for real FLOPs and latency reduction.
 
-**Why DVC for data?** The MVTec dataset is ~5 GB. Git is not designed for large files. DVC versions the data separately while keeping a lightweight pointer in Git, so the dataset version is always linked to the code version.
+**Why FX graph mode for quantization?** Our model uses custom `PrunedBottleneck` blocks with residual connections. The Eager Mode API requires manual `QuantStub`/`DeQuantStub` insertion and cannot handle `+=` in residuals. FX mode traces the full computation graph and inserts quantization nodes automatically.
+
+**Why distillation last?** The compressed teacher is still too large for edge deployment. Distillation transfers its knowledge into MobileNetV3-Small (1M params, 4.1 MB), which runs at 21 ms on desktop CPU and is deployable on Raspberry Pi.
 
 ## Stack
 
 | Tool | Role |
 |---|---|
-| PyTorch 2.x | Model training and compression |
-| torchvision | ResNet50 pretrained weights, transforms |
+| PyTorch 2.x | Training and compression |
+| torchvision | Pretrained weights, transforms |
 | Hydra | Configuration management |
 | MLflow | Experiment tracking |
 | DVC | Data versioning |
 | ONNX | Model export for edge deployment |
 | pytest | Test suite |
 
-## Reference
+## References
 
 Bergmann, P., Fauser, M., Sattlegger, D., & Steger, C. (2019). MVTec AD — A Comprehensive Real-World Dataset for Unsupervised Anomaly Detection. *CVPR 2019*.
 
 Li, C., Sohn, K., Yoon, J., & Pfister, T. (2021). CutPaste: Self-Supervised Learning for Anomaly Detection and Localization. *CVPR 2021*.
+
+Molchanov, P., Tyree, S., Karras, T., Aila, T., & Kautz, J. (2017). Pruning Convolutional Neural Networks for Resource Efficient Inference. *ICLR 2017*.
+
+Hinton, G., Vinyals, O., & Dean, J. (2015). Distilling the Knowledge in a Neural Network. *NIPS Workshop*.
 
 ## License
 
