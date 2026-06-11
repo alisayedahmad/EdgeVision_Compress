@@ -24,16 +24,26 @@ The pipeline covers four techniques applied in sequence:
 
 Evaluated on the MVTec AD `bottle` category, test split.
 
+### Compression pipeline
+
 | Model | Image AUROC | Latency P50 (ms) | Size (MB) | FLOPs |
 |---|---|---|---|---|
-| ResNet50 baseline | 0.9902 | — | ~98 | 8.18G |
-| + Unstructured pruning (85% sparse) | 1.0000 | — | ~98 | 8.18G |
-| + Structured pruning (30% channels) | 0.9926 | 74.7 | 77.2 | 6.22G |
+| ResNet50 baseline | 0.9902 | 63.1 | 96.3 | 8.18G |
+| + Unstructured pruning (85% sparse) | 1.0000 | — | ~96 | 8.18G |
+| + Structured pruning (30% channels) | 0.9926 | 56.8 | 77.2 | 6.22G |
 | + PTQ INT8 | 0.9369 | 31.4 | 19.7 | — |
 | + QAT INT8 | 0.9951 | — | 19.7 | — |
-| MobileNetV3-Small (distilled) | 0.9890 | 21.3 | 4.1 | — |
+| MobileNetV3-Small (distilled) | 0.9890 | 19.0 | 4.1 | 109.9M |
 
-The distilled student achieves 99.9% of the teacher's AUROC while being 19x smaller and 3.5x faster on CPU.
+### Edge deployment (ONNX Runtime, single-thread CPU)
+
+| Model | P50 (ms) | FPS | ONNX Size (MB) | Pi4 estimate |
+|---|---|---|---|---|
+| ResNet50 baseline | 133.2 | 3.5 | 96.1 | ~800 ms (1.3 FPS) |
+| Structured pruned | 97.3 | 4.3 | 77.0 | ~584 ms (1.7 FPS) |
+| MobileNetV3 student | 4.2 | 234.8 | 4.0 | ~25 ms (40 FPS) |
+
+**Bottom line:** the distilled student is 23.9x smaller, 31.9x faster, and loses only 0.12% AUROC compared to the baseline. On a Raspberry Pi 4 it runs at an estimated 40 FPS — real-time industrial inspection.
 
 ## Installation
 
@@ -85,6 +95,12 @@ python scripts/quantize.py "mlflow.tracking_uri=sqlite:///mlflow.db"
 # Knowledge distillation
 python scripts/distill.py "mlflow.tracking_uri=sqlite:///mlflow.db"
 
+# Full pipeline benchmark
+python scripts/benchmark_all.py "mlflow.tracking_uri=sqlite:///mlflow.db"
+
+# Edge deployment simulation (ONNX Runtime)
+python scripts/edge_deploy.py "mlflow.tracking_uri=sqlite:///mlflow.db"
+
 # Different category
 python scripts/train_baseline.py data.category=capsule
 ```
@@ -117,7 +133,8 @@ EdgeVision-Compress/
 │   ├── prune.yaml              # unstructured pruning
 │   ├── prune_structured.yaml   # structured pruning
 │   ├── quantize.yaml           # PTQ and QAT
-│   └── distill.yaml            # knowledge distillation
+│   ├── distill.yaml            # knowledge distillation
+│   └── benchmark.yaml          # benchmark configuration
 ├── data/                       # DVC-tracked, not in Git
 ├── src/
 │   ├── models/                 # ResNet50AnomalyDetector, MobileNetV3Student
@@ -125,7 +142,7 @@ EdgeVision-Compress/
 │   │   ├── pruning/            # unstructured (L1), structured (Taylor), FLOPs counter
 │   │   ├── quantization/       # PTQ and QAT via FX graph mode
 │   │   └── distillation/       # combined loss, distillation trainer
-│   ├── benchmark/              # CPU latency measurement
+│   ├── benchmark/              # CPU latency, ONNX Runtime benchmark
 │   ├── data/                   # MVTecDataset, CutPaste augmentation
 │   ├── evaluation/             # image AUROC, pixel AUROC
 │   ├── training/               # Trainer, EarlyStopping
@@ -147,7 +164,9 @@ EdgeVision-Compress/
 
 **Why FX graph mode for quantization?** Our model uses custom `PrunedBottleneck` blocks with residual connections. The Eager Mode API requires manual `QuantStub`/`DeQuantStub` insertion and cannot handle `+=` in residuals. FX mode traces the full computation graph and inserts quantization nodes automatically.
 
-**Why distillation last?** The compressed teacher is still too large for edge deployment. Distillation transfers its knowledge into MobileNetV3-Small (1M params, 4.1 MB), which runs at 21 ms on desktop CPU and is deployable on Raspberry Pi.
+**Why distillation last?** The compressed teacher is still too large for edge deployment. Distillation transfers its knowledge into MobileNetV3-Small (1M params, 4.1 MB), which runs at 4.2 ms on desktop CPU and ~25 ms estimated on Raspberry Pi 4.
+
+**Why ONNX Runtime for edge benchmarks?** PyTorch latency measurements don't reflect real deployment. ONNX Runtime with single-thread execution and the CPUExecutionProvider simulates the constraints of edge hardware. The student achieves 234.8 FPS on desktop and an estimated 40 FPS on Raspberry Pi 4.
 
 ## Stack
 
@@ -158,7 +177,7 @@ EdgeVision-Compress/
 | Hydra | Configuration management |
 | MLflow | Experiment tracking |
 | DVC | Data versioning |
-| ONNX | Model export for edge deployment |
+| ONNX / ONNX Runtime | Model export and edge inference |
 | pytest | Test suite |
 
 ## References
