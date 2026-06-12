@@ -107,6 +107,18 @@ python scripts/train_baseline.py data.category=capsule
 
 All hyperparameters live in `configs/` — nothing is hardcoded in the source files.
 
+## Demo
+
+Launch the interactive Gradio demo locally:
+
+```bash
+pip install gradio
+python scripts/export_demo.py
+python demo/app.py
+```
+
+Opens at `http://localhost:7860`. Upload an industrial image to get an anomaly score from the distilled student model.
+
 ## Tracking experiments
 
 ```bash
@@ -148,6 +160,7 @@ EdgeVision-Compress/
 │   ├── training/               # Trainer, EarlyStopping
 │   └── utils/                  # logging, seeding
 ├── scripts/                    # one script per module
+├── demo/                       # Gradio interactive demo
 ├── tests/                      # pytest — one file per module
 ├── .github/workflows/ci.yml    # CI on every push
 ├── dvc.yaml                    # DVC pipeline stages
@@ -168,6 +181,26 @@ EdgeVision-Compress/
 
 **Why ONNX Runtime for edge benchmarks?** PyTorch latency measurements don't reflect real deployment. ONNX Runtime with single-thread execution and the CPUExecutionProvider simulates the constraints of edge hardware. The student achieves 234.8 FPS on desktop and an estimated 40 FPS on Raspberry Pi 4.
 
+## Extending to other categories
+
+The pipeline is demonstrated on the `bottle` category. Extending to all 15 MVTec categories requires rerunning the same pipeline with `data.category=<name>` — no code changes needed.
+
+```bash
+# Example: train and compress on the capsule category
+python scripts/train_baseline.py data.category=capsule
+python scripts/prune_unstructured.py data.category=capsule "mlflow.tracking_uri=sqlite:///mlflow.db"
+python scripts/prune_structured.py data.category=capsule "mlflow.tracking_uri=sqlite:///mlflow.db"
+python scripts/distill.py data.category=capsule "mlflow.tracking_uri=sqlite:///mlflow.db"
+```
+
+## Roadmap
+
+- [ ] Multi-category training with automated pipeline script
+- [ ] TensorRT INT8 export for Jetson Nano
+- [ ] Real Raspberry Pi 4 latency validation
+- [ ] HuggingFace Spaces deployment
+- [ ] Pixel-level anomaly heatmap in the Gradio demo
+
 ## Stack
 
 | Tool | Role |
@@ -178,6 +211,7 @@ EdgeVision-Compress/
 | MLflow | Experiment tracking |
 | DVC | Data versioning |
 | ONNX / ONNX Runtime | Model export and edge inference |
+| Gradio | Interactive demo |
 | pytest | Test suite |
 
 ## References
