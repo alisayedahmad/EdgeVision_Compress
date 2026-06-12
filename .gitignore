@@ -58,3 +58,5 @@ multirun/
 mlflow.db
 
 mlflow.db
+
+demo/examples/
